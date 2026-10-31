@@ -1,15 +1,15 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowUpDown, Filter, Search } from "lucide-react";
+import { useState } from "react";
+import { Search } from "lucide-react";
 import { TeacherShell } from "@/components/teacher-shell";
 import { Card, MiniProgress, StatusBadge } from "@/components/ui";
-
-const people = [
-  ["pimchanok", "พิมชนก ชัยวัฒนา", "โรงเรียนสาธิต มศว", 92, "Shortlisted"],
-  ["thanawat", "ธนวัฒน์ ศรีสุข", "โรงเรียนเตรียมอุดมศึกษา", 86, "Review"],
-  ["kulthida", "กุลธิดา วงศ์ดี", "โรงเรียนหาดใหญ่วิทยาลัย", 74, "Review"],
-  ["naphat", "ณภัทร สุวรรณ", "โรงเรียนกรุงเทพคริสเตียน", 61, "Needs attention"],
-];
+import { useDemoData } from "@/lib/use-demo-data";
 
 export default function ApplicationsPage() {
-  return <TeacherShell><div className="page"><div className="page-heading"><div><p className="eyebrow">APPLICANTS</p><h1>ผู้สมัครทั้งหมด</h1><p>ตรวจสอบ เปรียบเทียบ และตัดสินใจจากข้อมูลของผู้สมัคร</p></div></div><div className="toolbar"><label className="search"><Search size={17} /><input placeholder="ค้นหาชื่อหรือโรงเรียน..." /></label><button className="button secondary"><Filter size={16} />ตัวกรอง</button><button className="button secondary"><ArrowUpDown size={16} />เรียงลำดับ</button></div><Card className="applicants-list">{people.map(([id, name, school, match, status], index) => <Link href={`/applications/${id}`} className="applicant-list-row" key={String(id)}><div className={`avatar avatar-${index + 1}`}>{String(name).slice(0, 2)}</div><div className="candidate-name"><b>{name}</b><span>{school}</span></div><div className="match-cell wide"><b>{match}% match</b><MiniProgress value={Number(match)} tone={Number(match) > 80 ? "green" : Number(match) > 65 ? "purple" : "amber"} /></div><StatusBadge tone={status === "Shortlisted" ? "green" : status === "Review" ? "blue" : "amber"}>{status}</StatusBadge><span className="view-label">ดูรายละเอียด →</span></Link>)}</Card></div></TeacherShell>;
+  const { applicants } = useDemoData();
+  const [query, setQuery] = useState("");
+  const visible = applicants.filter(p => `${p.name} ${p.school}`.toLowerCase().includes(query.toLowerCase()));
+  return <TeacherShell><div className="page"><div className="page-heading"><div><p className="eyebrow">APPLICANTS · DEMO</p><h1>ผู้สมัครทั้งหมด</h1><p>ข้อมูลตัวอย่างและใบสมัครที่บันทึกในเบราว์เซอร์นี้</p></div></div><div className="toolbar"><label className="search"><Search size={17} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="ค้นหาชื่อหรือโรงเรียน..." /></label></div><Card className="applicants-list">{visible.length === 0 && <p style={{ padding: 24 }}>ไม่พบผู้สมัคร</p>}{visible.map((person, index) => <Link href={`/applications/${person.id}`} className="applicant-list-row" key={person.id}><div className={`avatar avatar-${index % 4 + 1}`}>{person.name.slice(0, 2)}</div><div className="candidate-name"><b>{person.name}</b><span>{person.school}</span></div><div className="match-cell wide"><b>{person.score === null ? "รอการประเมิน" : `${person.score}% match`}</b>{person.score !== null && <MiniProgress value={person.score} tone={person.score > 80 ? "green" : "amber"} />}</div><StatusBadge tone={person.status === "Approved" ? "green" : person.status === "Rejected" ? "amber" : "blue"}>{person.status}</StatusBadge><span className="view-label">ดูรายละเอียด →</span></Link>)}</Card></div></TeacherShell>;
 }
