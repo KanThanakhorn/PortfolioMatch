@@ -2,6 +2,8 @@
 
 วันที่ตรวจล่าสุด: 1 พฤศจิกายน 2569 · branch `kan/backend`
 
+> เอกสารนี้อธิบาย flow รุ่น localStorage เดิม. สถานะล่าสุดหลังเพิ่ม Supabase, ผลทดสอบจริง และงานส่งต่ออยู่ใน [kan-supabase-handoff.md](kan-supabase-handoff.md).
+
 ## ขอบเขตที่ทำ
 
 - หน้าสร้างรอบรับสมัครบันทึกชื่อ คณะ ปี วันปิดรับ และ requirement; สร้างลิงก์จาก origin ที่เปิดเว็บอยู่ ไม่ผูกกับ `localhost`.

@@ -1,4 +1,7 @@
 import type { PortfolioAnalysis } from "@/lib/portfolio-analysis";
+import { createHash, timingSafeEqual } from "node:crypto";
+import { databaseMode } from "@/lib/supabase";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const runtime = "nodejs";
 
@@ -48,13 +51,6 @@ function validAnalysis(value: unknown): value is PortfolioAnalysis {
 }
 
 export async function POST(request: Request) {
-  if (!process.env.GEMINI_API_KEY) {
-    return Response.json({ error: "ยังไม่ได้ตั้งค่า GEMINI_API_KEY บนเซิร์ฟเวอร์" }, { status: 503 });
-  }
-  if (process.env.NODE_ENV === "production" && process.env.AI_REVIEW_PUBLIC_DEMO !== "true") {
-    return Response.json({ error: "การวิเคราะห์ AI บนเซิร์ฟเวอร์นี้ยังไม่เปิดใช้งาน" }, { status: 503 });
-  }
-
   let form: FormData;
   try {
     form = await request.formData();
@@ -62,8 +58,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "อ่านข้อมูลที่ส่งมาไม่สำเร็จ" }, { status: 400 });
   }
   const file = form.get("portfolio");
-  const requirement = form.get("requirement");
-  if (!(file instanceof File) || typeof requirement !== "string" || !requirement.trim()) {
+  let requirement = form.get("requirement");
+  if (!(file instanceof File) || (!databaseMode && (typeof requirement !== "string" || !requirement.trim()))) {
     return Response.json({ error: "ต้องแนบ PDF และเกณฑ์การพิจารณา" }, { status: 400 });
   }
   if (file.type !== "application/pdf" || !file.name.toLowerCase().endsWith(".pdf")) {
@@ -72,13 +68,54 @@ export async function POST(request: Request) {
   if (file.size === 0 || file.size >= MAX_AI_FILE_BYTES) {
     return Response.json({ error: "ไฟล์สำหรับวิเคราะห์ AI ต้องมีขนาดต่ำกว่า 45 MB" }, { status: 400 });
   }
-  if (requirement.length > 5000) {
-    return Response.json({ error: "เกณฑ์การพิจารณายาวเกิน 5,000 ตัวอักษร" }, { status: 400 });
-  }
-
   const bytes = Buffer.from(await file.arrayBuffer());
   if (bytes.subarray(0, 5).toString("ascii") !== "%PDF-") {
     return Response.json({ error: "ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง" }, { status: 400 });
+  }
+
+  let applicationId = "";
+  if (databaseMode) {
+    const id = form.get("applicationId");
+    const token = form.get("submissionToken");
+    if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)
+      || typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
+      return Response.json({ error: "สิทธิ์วิเคราะห์ใบสมัครไม่ถูกต้อง" }, { status: 403 });
+    }
+    try {
+      const { data, error } = await getSupabaseAdmin().from("applications")
+        .select("id,ai_consent,analysis_status,submission_token_hash,campaigns(requirement)")
+        .eq("id", id).maybeSingle();
+      const stored = String(data?.submission_token_hash ?? "");
+      const supplied = createHash("sha256").update(token).digest("hex");
+      if (error || !data || !data.ai_consent || data.analysis_status !== "pending"
+        || stored.length !== supplied.length || !timingSafeEqual(Buffer.from(stored), Buffer.from(supplied))) {
+        return Response.json({ error: "สิทธิ์วิเคราะห์ใบสมัครไม่ถูกต้อง" }, { status: 403 });
+      }
+      const joined = data.campaigns as { requirement?: string } | { requirement?: string }[] | null;
+      const campaign = Array.isArray(joined) ? joined[0] : joined;
+      requirement = campaign?.requirement ?? "";
+      applicationId = id;
+    } catch {
+      return Response.json({ error: "ตรวจสอบใบสมัครไม่สำเร็จ" }, { status: 503 });
+    }
+  }
+  if (typeof requirement !== "string" || !requirement.trim() || requirement.length > 5000) {
+    return Response.json({ error: "เกณฑ์การพิจารณาไม่ถูกต้อง" }, { status: 400 });
+  }
+
+  async function saveFailure(message: string) {
+    if (!applicationId) return;
+    try { await getSupabaseAdmin().from("applications").update({ analysis_status: "error", analysis_error: message }).eq("id", applicationId); }
+    catch { /* The browser still receives the analysis error. */ }
+  }
+
+  if (!process.env.GEMINI_API_KEY) {
+    await saveFailure("ยังไม่ได้ตั้งค่า GEMINI_API_KEY บนเซิร์ฟเวอร์");
+    return Response.json({ error: "ยังไม่ได้ตั้งค่า GEMINI_API_KEY บนเซิร์ฟเวอร์" }, { status: 503 });
+  }
+  if (process.env.NODE_ENV === "production" && process.env.AI_REVIEW_PUBLIC_DEMO !== "true") {
+    await saveFailure("การวิเคราะห์ AI บนเซิร์ฟเวอร์นี้ยังไม่เปิดใช้งาน");
+    return Response.json({ error: "การวิเคราะห์ AI บนเซิร์ฟเวอร์นี้ยังไม่เปิดใช้งาน" }, { status: 503 });
   }
 
   let upstream: Response;
@@ -109,6 +146,7 @@ export async function POST(request: Request) {
       upstream = await fetch(endpoint, options);
     }
   } catch {
+    await saveFailure("ติดต่อบริการ AI ไม่สำเร็จ กรุณาลองอีกครั้ง");
     return Response.json({ error: "ติดต่อบริการ AI ไม่สำเร็จ กรุณาลองอีกครั้ง" }, { status: 502 });
   }
 
@@ -119,6 +157,7 @@ export async function POST(request: Request) {
       providerStatus = String(failure.error?.status ?? "");
     } catch { /* Keep a generic error when the provider response is not JSON. */ }
     const error = upstream.status === 429 || providerStatus === "RESOURCE_EXHAUSTED" ? "Gemini API ใช้งานเกินโควตาหรือขีดจำกัดชั่วคราว" : upstream.status === 403 || providerStatus === "PERMISSION_DENIED" ? "Gemini API ไม่อนุญาตให้ใช้งาน กรุณาตรวจสอบ API key และสิทธิ์ของโปรเจกต์" : upstream.status === 503 || providerStatus === "UNAVAILABLE" ? "Gemini มีผู้ใช้งานหนาแน่นชั่วคราว กรุณาลองอีกครั้ง" : "Gemini API วิเคราะห์ไม่สำเร็จ";
+    await saveFailure(error);
     return Response.json({ error }, { status: 502 });
   }
 
@@ -128,8 +167,15 @@ export async function POST(request: Request) {
       ?.map((part: { text?: string }) => part.text ?? "").join("");
     const analysis: unknown = JSON.parse(text);
     if (!validAnalysis(analysis)) throw new Error("Invalid analysis shape");
+    if (applicationId) {
+      const { error } = await getSupabaseAdmin().from("applications").update({
+        analysis_status: "complete", analysis, score: analysis.score, analysis_error: null,
+      }).eq("id", applicationId);
+      if (error) throw error;
+    }
     return Response.json({ analysis }, { headers: { "Cache-Control": "no-store" } });
   } catch {
+    await saveFailure("ผลวิเคราะห์ AI ไม่สมบูรณ์ กรุณาลองอีกครั้ง");
     return Response.json({ error: "ผลวิเคราะห์ AI ไม่สมบูรณ์ กรุณาลองอีกครั้ง" }, { status: 502 });
   }
 }

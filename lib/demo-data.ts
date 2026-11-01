@@ -7,6 +7,9 @@ export type Applicant = {
   analysis?: PortfolioAnalysis;
   analysisStatus?: AnalysisStatus;
   analysisError?: string;
+  campaignTitle?: string;
+  campaignFaculty?: string;
+  campaignRequirement?: string;
 };
 
 export type Campaign = { title: string; faculty: string; year: string; deadline: string; requirement: string };
