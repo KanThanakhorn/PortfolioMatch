@@ -4,9 +4,9 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
-    <Link className="logo" href="/dashboard" aria-label="Portwise dashboard">
+    <Link className="logo" href="/dashboard" aria-label="PortfolioMatch dashboard">
       <span className="logo-mark"><Sparkles size={18} strokeWidth={2.4} /></span>
-      {compact ? null : <span>portwise</span>}
+      {compact ? null : <span>PortfolioMatch</span>}
     </Link>
   );
 }

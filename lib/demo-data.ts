@@ -1,7 +1,12 @@
+import type { AnalysisStatus, PortfolioAnalysis } from "./portfolio-analysis";
+
 export type Applicant = {
   id: string; name: string; school: string; email: string; phone: string;
   gpax: string; fileName: string; intro: string; score: number | null;
   status: "Review" | "Approved" | "Rejected";
+  analysis?: PortfolioAnalysis;
+  analysisStatus?: AnalysisStatus;
+  analysisError?: string;
 };
 
 export type Campaign = { title: string; faculty: string; year: string; deadline: string; requirement: string };
