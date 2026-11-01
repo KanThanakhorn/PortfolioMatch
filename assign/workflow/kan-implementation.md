@@ -1,6 +1,6 @@
 # งานของกานต์: System flow และ integration สำหรับเดโม
 
-วันที่ตรวจ: 31 ตุลาคม 2569 · branch `kan/backend`
+วันที่ตรวจล่าสุด: 1 พฤศจิกายน 2569 · branch `kan/backend`
 
 ## ขอบเขตที่ทำ
 
@@ -60,7 +60,11 @@ npm run dev
 | ตรวจฟอร์มที่ไม่มีไฟล์ | Pass | กรอกข้อมูลและกดส่งโดยไม่แนบไฟล์ เห็นข้อความ `กรุณาแนบ Portfolio PDF` และไม่สร้างใบสมัคร |
 | Approve และ dashboard | Pass | เปิด `pimchanok`, กด Approve, เปิด dashboard พบอนุมัติ 1 คนและรอตรวจ 3 คน |
 | ส่งพร้อมไฟล์ PDF | Pass หลัง merge | อัปโหลดไฟล์ PDF ทดสอบผ่านเบราว์เซอร์, กรอกข้อมูลครบ, ส่งสำเร็จ, รีเฟรชแล้วยังเห็นหน้าสำเร็จ และพบผู้สมัครใหม่ใน `/applications` |
-| Reject และ responsive | ยังไม่ทดสอบในเบราว์เซอร์ | ให้ตงทดสอบพร้อม screenshot และ Pass/Fail |
+| ไฟล์ผิดชนิด/เกิน 50 MB | Pass | Chrome ปฏิเสธ `.txt` และ PDF 51 MiB โดยไม่เพิ่มผู้สมัคร |
+| Approve/Reject หลังรีเฟรช | Pass | สถานะคงอยู่ในรายละเอียด, Applicants และ Dashboard ตรงกัน |
+| มือถือ 390×844 | Pass เฉพาะป้ายสถานะ | แก้ CSS ให้ Applicants และ Dashboard แสดง Approved/Rejected; ยังต้องตรวจทุกส่วนพร้อมภาพหลักฐานจากตง |
+
+รายละเอียดการทดสอบรอบล่าสุดอยู่ที่ `assign/workflow/kan-system-flow-test-2026-11-01.md`.
 
 ## จุดส่งต่อ
 
