@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { deleteDriveFile, googleDriveConfigured, uploadPortfolioToDrive } from "@/lib/google-drive";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,9 @@ function field(form: FormData, name: string, maxLength: number): string | null {
 }
 
 export async function POST(request: Request) {
+  if (!googleDriveConfigured()) {
+    return Response.json({ error: "ยังไม่ได้เชื่อม Google Drive สำหรับเก็บไฟล์ PDF" }, { status: 503 });
+  }
   let form: FormData;
   try { form = await request.formData(); }
   catch { return Response.json({ error: "อ่านใบสมัครไม่สำเร็จ" }, { status: 400 }); }
@@ -46,17 +50,21 @@ export async function POST(request: Request) {
     return Response.json({ error: "ไฟล์นี้ไม่ใช่ PDF ที่ถูกต้อง" }, { status: 400 });
   }
 
+  const id = randomUUID();
+  let driveFileId = "";
+  let driveUploadStarted = false;
   try {
     const client = getSupabaseAdmin();
     const { data: campaign, error: campaignError } = await client.from("campaigns")
       .select("id").eq("id", campaignId).eq("is_open", true).maybeSingle();
     if (campaignError || !campaign) return Response.json({ error: "รอบรับสมัครไม่พร้อมใช้งาน" }, { status: 404 });
-    const id = randomUUID();
     const submissionToken = randomBytes(32).toString("base64url");
     const submissionTokenHash = createHash("sha256").update(submissionToken).digest("hex");
+    driveUploadStarted = true;
+    driveFileId = await uploadPortfolioToDrive(file, id);
     const { error } = await client.from("applications").insert({
       id, campaign_id: campaignId, full_name: `${firstName} ${lastName}`, school,
-      email, phone, gpax, file_name: file.name, intro,
+      email, phone, gpax, file_name: file.name, drive_file_id: driveFileId, intro,
       privacy_consented_at: new Date().toISOString(),
       ai_consent: aiConsent, analysis_status: aiConsent ? "pending" : "not_requested",
       ai_consented_at: aiConsent ? new Date().toISOString() : null,
@@ -65,6 +73,12 @@ export async function POST(request: Request) {
     if (error) throw error;
     return Response.json({ id, submissionToken }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch {
-    return Response.json({ error: "บันทึกใบสมัครไม่สำเร็จ" }, { status: 503 });
+    if (driveFileId) {
+      try { await deleteDriveFile(driveFileId); }
+      catch (cleanupError) { console.error("Google Drive cleanup failed after application insert error", cleanupError); }
+    }
+    return Response.json({ error: driveUploadStarted && !driveFileId
+      ? "บันทึก PDF ใน Google Drive ไม่สำเร็จ กรุณาลองอีกครั้ง"
+      : "บันทึกใบสมัครไม่สำเร็จ" }, { status: 503 });
   }
 }

@@ -10,6 +10,7 @@ export type Applicant = {
   campaignTitle?: string;
   campaignFaculty?: string;
   campaignRequirement?: string;
+  hasStoredPdf?: boolean;
 };
 
 export type Campaign = { title: string; faculty: string; year: string; deadline: string; requirement: string };

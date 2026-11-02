@@ -2,6 +2,8 @@
 
 วันที่: 1 พฤศจิกายน 2569 · branch `kan/backend`
 
+> เอกสารนี้เป็นสถานะก่อนเพิ่ม Google Drive. อ่าน [สถานะงาน PDF ใน Google Drive วันที่ 2 พ.ย.](kan-google-drive-status-2026-11-02.md) สำหรับการเปลี่ยนแปลงล่าสุดและผลทดสอบที่ยังรออยู่.
+
 ## สถานะที่ทำจริง
 
 - ใช้ Supabase MCP ลง migration 2 ชุดในโปรเจกต์ `ipqqtuvxiuwhdimccacn` แล้ว: `portfolio_core_20261101` และ `portfolio_fk_indexes_20261101`. ไฟล์ต้นทางอยู่ใน `supabase/migrations/` ตามลำดับชื่อไฟล์.

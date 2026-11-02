@@ -76,3 +76,4 @@ button { cursor:pointer; }
 .user-card:has(.sign-out-button){grid-template-columns:38px minmax(0,1fr) auto}
 .user-card:has(.sign-out-button) strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .teacher-login-card .field-error{color:var(--red)}
+.portfolio-file-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0}.portfolio-file-actions .button{font-size:11px;padding:9px 12px}.portfolio-file-actions>a:not(.button){font-size:11px;color:var(--purple);font-weight:700}.portfolio-pdf-preview{display:block;width:100%;height:480px;border:1px solid var(--border);border-radius:10px;background:#f3f3f5}

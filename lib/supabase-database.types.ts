@@ -26,6 +26,7 @@ export type Database = {
           created_at: string
           decided_at: string | null
           decided_by: string | null
+          drive_file_id: string | null
           email: string
           file_name: string
           full_name: string
@@ -51,6 +52,7 @@ export type Database = {
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
+          drive_file_id?: string | null
           email: string
           file_name: string
           full_name: string
@@ -76,6 +78,7 @@ export type Database = {
           created_at?: string
           decided_at?: string | null
           decided_by?: string | null
+          drive_file_id?: string | null
           email?: string
           file_name?: string
           full_name?: string

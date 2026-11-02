@@ -8,7 +8,7 @@ type CampaignRow = {
 
 type ApplicationRow = {
   id: string; full_name: string; school: string; email: string; phone: string;
-  gpax: number; file_name: string; intro: string; status: Applicant["status"];
+  gpax: number; file_name: string; drive_file_id: string | null; intro: string; status: Applicant["status"];
   score: number | null; analysis: Applicant["analysis"] | null;
   analysis_status: Applicant["analysisStatus"]; analysis_error: string | null;
   campaigns: { title: string; faculty: string; requirement: string } | { title: string; faculty: string; requirement: string }[] | null;
@@ -24,7 +24,7 @@ export async function loadDatabaseData(): Promise<DemoData> {
   if (!client) throw new Error("Supabase is not configured");
   const [campaigns, applications] = await Promise.all([
     client.from("campaigns").select("id,slug,title,faculty,year,deadline,requirement,open_date,question").order("created_at", { ascending: false }).limit(1),
-    client.from("applications").select("id,full_name,school,email,phone,gpax,file_name,intro,status,score,analysis,analysis_status,analysis_error,campaigns(title,faculty,requirement)").order("created_at", { ascending: false }),
+    client.from("applications").select("id,full_name,school,email,phone,gpax,file_name,drive_file_id,intro,status,score,analysis,analysis_status,analysis_error,campaigns(title,faculty,requirement)").order("created_at", { ascending: false }),
   ]);
   if (campaigns.error || applications.error) throw new Error("โหลดข้อมูล Supabase ไม่สำเร็จ");
   const latest = (campaigns.data?.[0] ?? null) as CampaignRow | null;
@@ -36,6 +36,7 @@ export async function loadDatabaseData(): Promise<DemoData> {
       return {
       id: row.id, name: row.full_name, school: row.school, email: row.email,
       phone: row.phone, gpax: String(row.gpax), fileName: row.file_name,
+      hasStoredPdf: Boolean(row.drive_file_id),
       intro: row.intro, status: row.status, score: row.score,
       analysis: row.analysis ?? undefined, analysisStatus: row.analysis_status,
       analysisError: row.analysis_error ?? undefined,
